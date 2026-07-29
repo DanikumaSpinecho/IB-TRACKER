@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Client Map — GE Healthcare Theme (Responsive)</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+  :root{
+    --ge-purple:#4B0082;
+    --ge-purple-dk:#380065;
+    --ge-gray:#D8D9DD;
+    --ui-bg:#f7f8fa;
+    --ui-border:#d9dbe0;
+    --ui-muted:#777;
+    --header-h:56px; /* mis à jour dynamiquement en JS */
+    --panel-w:420px;  /* largeur du panneau en mobile */
+  }
+  html,body{height:100%;margin:0;font-family:Segoe UI,Roboto,Arial,sans-serif;background:var(--ui-bg);color:#2d2d2d}
+
+  /* --------  NAMESPACE CLIENT MAP  -------- */
+  #clientMapApp{display:grid;grid-template-rows:auto 1fr;height:100vh;contain:layout}
+  /* header */
+  #clientMapApp .cm-header{position:sticky;top:0;z-index:1010;padding:.6rem .8rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;border-bottom:2px solid var(--ui-border);background:#f4f5f7}
+  #clientMapApp .cm-header h1{margin:0;font-size:1.1rem;font-weight:600;color:var(--ge-purple)}
+  #clientMapApp .cm-header .cm-toggle{display:none;margin-right:.2rem}
+
+  /* grille principale : panneau + carte (desktop) */
+  #clientMapApp .cm-grid{display:grid;grid-template-columns:380px minmax(0,1fr);min-height:0;position:relative}
+  #clientMapApp .cm-panel{border-right:1px solid var(--ui-border);padding:.8rem;overflow:auto;background:#fafbfc}
+  #clientMapApp .cm-map{width:100%;height:100%;min-height:0;position:relative}
+
+  /* Form / UI */
+  #clientMapApp .cm-panel h2{margin:.4rem 0 .4rem;font-size:.95rem;color:var(--ge-purple)}
+  #clientMapApp .cm-panel label{display:block;font-size:.85rem;margin-top:.45rem}
+  #clientMapApp .cm-panel input,
+  #clientMapApp .cm-panel select,
+  #clientMapApp .cm-panel textarea{width:100%;box-sizing:border-box;padding:.45rem .55rem;font-size:.9rem;border:1px solid #cfd2d6;border-radius:.45rem;background:#fff}
+  #clientMapApp .cm-row{display:grid;grid-template-columns:1fr auto;gap:.5rem}
+  #clientMapApp .cm-row-2{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+  #clientMapApp .cm-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem}
+  #clientMapApp button{cursor:pointer;padding:.5rem .7rem;font-size:.9rem;border-radius:.5rem;border:1px solid #cfd2d6;background:#f4f5f7;transition:.2s}
+  #clientMapApp button:hover{background:#e8e9ec}
+  #clientMapApp button.primary{background:var(--ge-purple);color:#fff;border-color:var(--ge-purple)}
+  #clientMapApp button.primary:hover{background:#5b009a}
+  #clientMapApp table{width:100%;border-collapse:collapse;font-size:.85rem}
+  #clientMapApp th,#clientMapApp td{border-bottom:1px solid #e5e7eb;padding:.4rem .35rem;text-align:left;vertical-align:top}
+  #clientMapApp th{background:#f4f5f7;position:sticky;top:0;z-index:1}
+  #clientMapApp .cm-chips{display:flex;gap:.4rem;flex-wrap:wrap}
+  #clientMapApp .cm-chip{font-size:.75rem;padding:.15rem .45rem;border-radius:999px;background:#ede9f5;border:1px solid #c9b3e3;color:var(--ge-purple)}
+  #clientMapApp .muted{color:var(--ui-muted)}
+  #clientMapApp .status{font-size:.8rem}
+
+  /* Leaflet thème léger */
+  #clientMapApp .leaflet-bar a,#clientMapApp .leaflet-bar a:hover{background:#f4f5f7;border-color:#cfd2d6;color:var(--ge-purple)}
+  #clientMapApp .leaflet-bar a:hover{background:#e8e9ec}
+  #clientMapApp .leaflet-control-attribution{background:rgba(244,245,247,.9);color:var(--ge-purple);border:1px solid var(--ui-border);padding:.1rem .3rem;border-radius:.3rem}
+  #clientMapApp .leaflet-popup-content-wrapper{border:1px solid #c9b3e3;box-shadow:0 6px 18px rgba(75,0,130,.12)}
+  #clientMapApp .leaflet-popup-tip{background:#fff;border:1px solid #c9b3e3}
+  #clientMapApp .leaflet-popup-content strong{color:var(--ge-purple)}
+
+  /* Summary */
+  #clientMapApp details summary{
+    cursor:pointer;padding:.5rem .7rem;font-size:.9rem;border-radius:.5rem;border:1px solid #cfd2d6;background:#f4f5f7;transition:.2s;display:block;width:100%;box-sizing:border-box;margin-top:.6rem
+  }
+  #clientMapApp details summary:hover{background:#e8e9ec}
+
+  /* ---------- Responsive (≤ 900px) ---------- */
+  @media (max-width: 900px){
+    #clientMapApp .cm-header{gap:.35rem}
+    #clientMapApp .cm-header h1{font-size:1rem}
+    #clientMapApp .cm-header .cm-toggle{display:inline-flex;align-items:center;gap:.35rem}
+
+    /* Carte prend tout l'écran sous l'entête */
+    #clientMapApp .cm-grid{grid-template-columns:1fr;}
+    #clientMapApp .cm-map{height:calc(100vh - var(--header-h));}
+
+    /* Panneau en tiroir */
+    #clientMapApp .cm-panel{position:absolute;z-index:1020;top:var(--header-h);left:0;width:min(100vw, var(--panel-w));height:calc(100vh - var(--header-h));box-shadow:0 12px 30px rgba(0,0,0,.18);transform:translateX(-106%);transition:transform .28s ease}
+    #clientMapApp.panel-open .cm-panel{transform:translateX(0)}
+
+    /* Tables & zones scrollables */
+    #clientMapApp .cm-panel table{font-size:.82rem}
+    #clientMapApp .cm-row-3{grid-template-columns:1fr 1fr;}
+  }
+
+  /* Petits écrans très étroits */
+  @media (max-width: 360px){
+    #clientMapApp button{padding:.44rem .55rem;font-size:.85rem}
+  }
+</style>
+</head>
+<body>
+
+<div id="clientMapApp">
+  <div class="cm-header">
+    <button id="btnTogglePanel" class="cm-toggle" aria-expanded="false" aria-controls="cm-panel" title="Afficher/Masquer le panneau">☰ Panneau</button>
+    <h1>Client Map</h1>
+
+    <input type="file" id="fileInput" accept=".csv,.txt,.geojson,.json" />
+    <button id="btnLoad">Charger (CSV/TXT/GeoJSON)</button>
+
+    <button id="btnExportCSV">Exporter CSV</button>
+    <button id="btnExportGeoJSON">Exporter GeoJSON</button>
+
+    <button id="btnSave" class="primary">Enregistrer…</button>
+    <button id="btnAutosave">Activer l’autosave</button>
+    <span id="saveStatus" class="status muted"></span>
+  </div>
+
+  <div class="cm-grid">
+    <aside id="cm-panel" class="cm-panel" aria-label="Panneau latéral">
+      <h2>Recherche d'adresse</h2>
+      <div class="cm-row">
+        <input id="fSearch" placeholder="Rechercher une adresse (OSM/Nominatim)" />
+        <button id="btnSearch">Rechercher</button>
+      </div>
+      <div class="cm-row" style="margin-top:.4rem">
+        <div id="searchResults" class="muted" style="font-size:.9rem;"></div>
+        <button id="btnClearSearch" type="button">Vider résultats</button>
+      </div>
+
+      <h2>Filtres Client</h2>
+      <div class="cm-row-3">
+        <label>Par système
+          <select id="filterSystem"><option value="">Tous</option></select>
+        </label>
+        <label style="grid-column: span 2;">Par nom
+          <input id="filterName" placeholder="Filtrer par nom de Client…" />
+        </label>
+      </div>
+
+      <h2>Ajouter / Modifier un Client</h2>
+      <form id="clientForm">
+        <label>Nom du Client <input id="fName" required /></label>
+        <div class="cm-row-2">
+          <label>Latitude  <input id="fLat" type="number" step="any" required /></label>
+          <label>Longitude <input id="fLng" type="number" step="any" required /></label>
+        </div>
+        <label>Système
+          <select id="fSystem">
+            <option value="">—</option>
+            <option>Systeme A</option>
+            <option>Systeme B</option>
+            <option>Systeme C</option>
+          </select>
+        </label>
+
+        <details>
+          <summary>Plus d'informations / Contacts</summary>
+          <div style="padding:.6rem 0 .2rem;">
+            <label>Adresse  <input id="fAddress" placeholder="n°, rue, ville" /></label>
+            <label>Téléphone Client  <input id="fPhone" placeholder="+33 ..." /></label>
+
+            <h3 style="margin:.8rem 0 .4rem; font-size:.9rem; color:var(--ge-purple-dk);">Informations FE</h3>
+            <label>Nom du FE <input id="fNomFE" placeholder="Nom de l'ingénieur de terrain" /></label>
+            <label>Téléphone FE <input id="fPhoneFE" placeholder="+33 ..." /></label>
+
+            <h3 style="margin:.8rem 0 .4rem; font-size:.9rem; color:var(--ge-purple-dk);">Contact Principal</h3>
+            <label>Nom Contact <input id="fContactNom" /></label>
+            <div class="cm-row-2">
+              <label>Téléphone Contact <input id="fContactPhone" placeholder="+33 ..." /></label>
+              <label>Email Contact <input id="fContactEmail" placeholder="nom@exemple.com" /></label>
+            </div>
+            <label>Notes  <textarea id="fNotes" rows="3" placeholder="notes diverses"></textarea></label>
+          </div>
+        </details>
+
+        <div class="cm-row" style="margin-top:.6rem;">
+          <button class="primary" type="submit">Ajouter / Mettre à jour</button>
+          <button id="btnClear" type="button">Vider</button>
+        </div>
+        <div id="formMode" class="muted" style="margin-top:.4rem"></div>
+      </form>
+
+      <h2 style="margin-top:1rem;">Clients</h2>
+      <div class="cm-chips" id="chips"></div>
+      <div style="overflow:auto; max-height:40vh; border:1px solid var(--ui-border); border-radius:.6rem;">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Nom</th><th>Système</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="clientTable"></tbody>
+        </table>
+      </div>
+
+      <p class="muted" style="margin-top:.6rem;">
+        Clic gauche ou <b>clic droit</b> sur la carte → remplit Lat/Lng (aucune création auto).
+      </p>
+    </aside>
+
+    <div id="cm-map" class="cm-map"></div>
+  </div>
+</div>
+
+<script>
+/* ============ Thème / Icônes par système ============ */
+const SYSTEMS = {
+  "Systeme A": { color: "#D8D9DD" },
+  "Systeme B": { color: "#4B0082" },
+  "Systeme C": { color: "#8e8ea0" }
+};
+
+/* ============ Map config ============ */
+const CONFIG = {
+  osmOnline: {
+    urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    subdomains: ["a","b","c"],
+    attribution: "© OpenStreetMap contributors",
+    minZoom: 0, maxZoom: 19, center: [46.6, 2.5], initZoom: 6
+  },
+  localTiles: { urlTemplate: "./france-tiles/{z}/{x}/{y}.png", attribution: "Tuiles locales", minZoom: 0, maxZoom: 19 }
+};
+
+/* ============ State & helpers ============ */
+const state = {
+  map:null, markers:[], data:[],
+  fileHandle:null, autosave:false, autosaveTimer:null, dirty:false,
+  headers:["name","lat","lng","address","phone","notes","system","nom_fe","telephone_fe","contact_nom","contact_telephone","contact_email"],
+  editIndex:null, filterSystem:"", filterName:""
+};
+const el = id => document.getElementById(id);
+function esc(s){return String(s??"").replace(/[&<>\\\"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\\\"":"&quot;","'":"&#39;"}[m]));}
+function setDirty(){ state.dirty = true; if (state.autosave) scheduleAutosave(); }
+function setStatus(msg){ el("saveStatus").textContent = msg || ""; }
+
+/* ============ Layout helpers (responsive) ============ */
+function updateHeaderHeightVar(){
+  const header = document.querySelector('#clientMapApp .cm-header');
+  if(!header) return;
+  const h = Math.round(header.getBoundingClientRect().height);
+  document.documentElement.style.setProperty('--header-h', h + 'px');
+}
+function togglePanel(){
+  const app = document.getElementById('clientMapApp');
+  const btn = el('btnTogglePanel');
+  const opened = app.classList.toggle('panel-open');
+  btn.setAttribute('aria-expanded', String(opened));
+  // Laisse le temps à l'animation avant d'invalider la taille de la carte
+  setTimeout(()=>{ if(state.map){ state.map.invalidateSize(); } }, 320);
+}
+
+/* ============ Map init ============ */
+function initMap(){
+  const osm = L.tileLayer(CONFIG.osmOnline.urlTemplate, {
+    minZoom: CONFIG.osmOnline.minZoom, maxZoom: CONFIG.osmOnline.maxZoom,
+    attribution: CONFIG.osmOnline.attribution, subdomains: CONFIG.osmOnline.subdomains
+  });
+  const esri = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19, attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics" }
+  );
+  const local = L.tileLayer(CONFIG.localTiles.urlTemplate, {
+    minZoom: CONFIG.localTiles.minZoom, maxZoom: CONFIG.localTiles.maxZoom,
+    attribution: CONFIG.localTiles.attribution, crossOrigin:true
+  });
+
+  state.map = L.map("cm-map", { layers:[osm] })
+             .setView(CONFIG.osmOnline.center, CONFIG.osmOnline.initZoom);
+
+  L.control.layers(
+    { "OSM (en ligne)": osm, "Satellite (Esri)": esri, "Tuiles locales": local },
+    null, { position:"topright" }
+  ).addTo(state.map);
+
+  const putLatLng = (latlng) => {
+    el("fLat").value = latlng.lat.toFixed(6);
+    el("fLng").value = latlng.lng.toFixed(6);
+    el("fName").focus();
+  };
+  state.map.on("click", e => putLatLng(e.latlng));
+  state.map.on("contextmenu", e => putLatLng(e.latlng));
+
+  // Recalcule après layout + resize
+  setTimeout(()=> state.map.invalidateSize(), 0);
+  window.addEventListener("resize", ()=> { updateHeaderHeightVar(); state.map.invalidateSize(); });
+  window.addEventListener("orientationchange", ()=> { updateHeaderHeightVar(); setTimeout(()=>state.map.invalidateSize(), 100); });
+}
+
+/* ============ Icon factory ============ */
+function makeIconFor(system){
+  const cfg = SYSTEMS[system] || null;
+  if (cfg && cfg.image){
+    const size = cfg.size || [28,28];
+    const anchor = cfg.anchor || [size[0]/2, size[1]];
+    return L.icon({ iconUrl: cfg.image, iconSize: size, iconAnchor: anchor, popupAnchor:[0,-anchor[1]+4] });
+  }
+  const color = (cfg && cfg.color) ? cfg.color : "#7c3aed";
+  const stroke = (color.toLowerCase() === "#4b0082") ? "#380065" : "#bfc1c7";
+  const svg =
+    "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='32' viewBox='0 0 24 32'>" +
+      "<defs><filter id='s' x='-20%' y='-20%' width='140%' height='140%'>" +
+        "<feDropShadow dx='0' dy='2' stdDeviation='1.5' flood-opacity='.18'/>" +
+      "</filter></defs>" +
+      "<path filter='url(#s)' d='M12 31s-8-9.3-8-16A8 8 0 1 1 20 15c0 6.7-8 16-8 16Z' fill='"+color+"' stroke='"+stroke+"' stroke-width='1.2'/>" +
+      "<circle cx='12' cy='12' r='3.6' fill='#fff'/>" +
+    "</svg>";
+  return L.icon({ iconUrl: "data:image/svg+xml," + encodeURIComponent(svg), iconSize:[24,32], iconAnchor:[12,31], popupAnchor:[0,-28] });
+}
+
+/* ============ Filters + render ============ */
+function getFilteredData(){
+  const sys = state.filterSystem.trim().toLowerCase();
+  const name = state.filterName.trim().toLowerCase();
+  return state.data.filter(d=>{
+    const okSys  = !sys || String(d.system||"").toLowerCase() === sys;
+    const okName = !name || String(d.name||"").toLowerCase().includes(name);
+    return okSys && okName;
+  });
+}
+function renderMarkers(){
+  state.markers.forEach(m => state.map.removeLayer(m)); state.markers = [];
+  const rows = getFilteredData();
+  rows.forEach(d => {
+    const lat = +d.lat, lng = +d.lng;
+    if (!isFinite(lat) || !isFinite(lng)) return;
+    const m = L.marker([lat,lng], { icon: makeIconFor(d.system||"") }).addTo(state.map);
+
+    const idx = state.data.indexOf(d);
+    const html = "<strong>"+esc(d.name||"")+"</strong><br>"+
+                 "<small>Système : "+esc(d.system||"")+"</small>"+
+                 "<div style='margin-top:.5rem'>"+
+                    "<button data-act='fly' data-idx='"+idx+"' style='padding:.3rem .5rem; font-size:.8rem;'>Voir</button> "+
+                    "<button data-act='edit' data-idx='"+idx+"' style='padding:.3rem .5rem; font-size:.8rem;'>Éditer</button>"+
+                 "</div>";
+    m.bindPopup(html);
+    m.on("click", () => selectRow(idx));
+    state.markers.push(m);
+  });
+}
+function renderTable(){
+  const tb = el("clientTable"); tb.innerHTML = "";
+  const rows = getFilteredData();
+  rows.forEach(d => {
+    const i = state.data.indexOf(d);
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>"+(i+1)+"</td>"+
+      "<td>"+esc(d.name||"")+"</td>"+
+      "<td>"+esc(d.system||"")+"</td>"+
+      "<td>"+
+        "<button data-act='edit' data-idx='"+i+"'>Éditer</button> "+
+        "<button data-act='fly'  data-idx='"+i+"'>Voir</button> "+
+        "<button data-act='del'  data-idx='"+i+"'>Suppr.</button>"+
+      "</td>";
+    tb.appendChild(tr);
+  });
+}
+function renderChipsAndFilters(){
+  const systems = [...new Set(state.data.map(d=>d.system).filter(Boolean))].sort();
+  const box = el("chips"); box.innerHTML = "";
+  systems.forEach(s => { const span=document.createElement("span"); span.className="cm-chip"; span.textContent=s; box.appendChild(span); });
+  const sel = el("filterSystem"); const keep = sel.value;
+  sel.innerHTML = "<option value=''>Tous</option>"+systems.map(s=>"<option value='"+esc(s)+"'>"+esc(s)+"</option>").join("");
+  if ([...sel.options].some(o=>o.value===keep)) sel.value = keep;
+  const fSel = el("fSystem"); const have = new Set([...fSel.options].map(o=>o.value));
+  systems.forEach(s=>{ if(!have.has(s)){ const o=document.createElement("option"); o.textContent=s; fSel.appendChild(o);} });
+}
+function refresh(){ renderMarkers(); renderTable(); renderChipsAndFilters(); }
+
+/* ============ Form / CRUD ============ */
+function showFormMode(){
+  el("formMode").textContent = (state.editIndex===null ? "Mode : ajout d'un Client" : "Mode : édition (ligne "+(state.editIndex+1)+")");
+}
+function selectRow(i){
+  state.editIndex = i;
+  const d = state.data[i];
+  el("fName").value = d.name || "";
+  el("fLat").value = d.lat || "";
+  el("fLng").value = d.lng || "";
+  el("fAddress").value = d.address || "";
+  el("fPhone").value = d.phone || "";
+  el("fNotes").value = d.notes || "";
+  el("fSystem").value = d.system || "";
+  el("fNomFE").value = d.nom_fe || "";
+  el("fPhoneFE").value = d.telephone_fe || "";
+  el("fContactNom").value = d.contact_nom || "";
+  el("fContactPhone").value = d.contact_telephone || "";
+  el("fContactEmail").value = d.contact_email || "";
+  showFormMode();
+}
+function clearForm(){
+  el("clientForm").reset();
+  state.editIndex = null;
+  showFormMode();
+}
+function addOrUpdateFromForm(){
+  const r = {
+    name: el("fName").value.trim(),
+    lat: el("fLat").value.trim(),
+    lng: el("fLng").value.trim(),
+    system: el("fSystem").value.trim(),
+    address: el("fAddress").value.trim(),
+    phone: el("fPhone").value.trim(),
+    notes: el("fNotes").value.trim(),
+    nom_fe: el("fNomFE").value.trim(),
+    telephone_fe: el("fPhoneFE").value.trim(),
+    contact_nom: el("fContactNom").value.trim(),
+    contact_telephone: el("fContactPhone").value.trim(),
+    contact_email: el("fContactEmail").value.trim()
+  };
+  if (state.editIndex !== null) { state.data[state.editIndex] = r; }
+  else { state.data.push(r); }
+  state.editIndex = null;
+  showFormMode();
+  setDirty();
+  refresh();
+}
+
+/* ============ CSV & GeoJSON ============ */
+function toCSV(rows, headers){
+  const escV = v => { const s = String(v ?? ""); return /[\",\\n]/.test(s) ? '"' + s.replace(/\"/g,'\"\"') + '"' : s; };
+  const head = headers.join(",");
+  const body = rows.map(r => headers.map(h => escV(r[h])).join(",")).join("\\n");
+  return head + "\\n" + body;
+}
+function parseCSV(text){
+  const rows=[]; let i=0, cur="", row=[], inQ=false;
+  const pushCell=()=>{ row.push(cur); cur=""; }, pushRow=()=>{ rows.push(row); row=[]; };
+  while(i<text.length){
+    const ch=text[i++];
+    if(inQ){
+      if(ch=='\"'){ if(text[i]=='\"'){ cur+='\"'; i++; } else { inQ=false; } }
+      else cur+=ch;
+    }else{
+      if(ch=='\"') inQ=true;
+      else if(ch===',') pushCell();
+      else if(ch==='\\n'){ pushCell(); pushRow(); }
+      else if(ch==='\\r'){ /* skip */ }
+      else cur+=ch;
+    }
+  }
+  pushCell();
+  const headers=(rows.shift()||[]).map(h=>(h||"").trim().toLowerCase());
+  return rows.filter(r=>r.length>1 || (r[0] && r[0].trim())).map(r=>{
+    const o={}; headers.forEach((h,idx)=> o[h]=(r[idx]||"").trim());
+    return {
+      name:o.name||o.titre||o.label||"",
+      lat:o.lat||o.latitude||"",
+      lng:o.lng||o.lon||o.long||o.longitude||"",
+      address:o.address||o.adresse||"",
+      phone:o.phone||o.telephone||o["téléphone"]||"",
+      notes:o.notes||o.description||o.desc||"",
+      system:o.system||o["système"]||o.categorie||o.category||"",
+      nom_fe:o.nom_fe||o.fe_name||o.fe_nom||"",
+      telephone_fe:o.telephone_fe||o.phone_fe||o.fe_phone||"",
+      contact_nom:o.contact_nom||o.contact_name||o.contacte_principal||"",
+      contact_telephone:o.contact_telephone||o.contact_phone||"",
+      contact_email:o.contact_email||o.contact_mail||o.email||""
+    };
+  });
+}
+function toGeoJSON(rows){
+  return {
+    type:"FeatureCollection",
+    features: rows.filter(d=>isFinite(+d.lat)&&isFinite(+d.lng)).map(d=>({
+      type:"Feature",
+      properties:{
+        name:d.name||"", address:d.address||"", phone:d.phone||"", notes:d.notes||"", system:d.system||"",
+        nom_fe:d.nom_fe||"", telephone_fe:d.telephone_fe||"", contact_nom:d.contact_nom||"", contact_telephone:d.contact_telephone||"", contact_email:d.contact_email||""
+      },
+      geometry:{ type:"Point", coordinates:[ +d.lng, +d.lat ] }
+    }))
+  };
+}
+function parseGeoJSON(text){
+  let gj; try{ gj=JSON.parse(text); }catch{ return []; }
+  if (!gj || gj.type!=="FeatureCollection" || !Array.isArray(gj.features)) return [];
+  return gj.features.map(f=>{
+    const p=f.properties||{}, g=f.geometry||{};
+    if (!g || g.type!=="Point" || !Array.isArray(g.coordinates)) return null;
+    const lng=+g.coordinates[0], lat=+g.coordinates[1];
+    if (!isFinite(lat)||!isFinite(lng)) return null;
+    return {
+      name:p.name||"", address:p.address||"", phone:p.phone||"", notes:p.notes||"", system:p.system||"",
+      lat:String(lat), lng:String(lng),
+      nom_fe:p.nom_fe||"", telephone_fe:p.telephone_fe||"", contact_nom:p.contact_nom||"", contact_telephone:p.contact_telephone||"", contact_email:p.contact_email||""
+    };
+  }).filter(Boolean);
+}
+function downloadBlob(filename, blob){
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+}
+function exportCSV(){ downloadBlob("clients.csv", new Blob([toCSV(state.data,state.headers)],{type:"text/csv"})); }
+function exportGeoJSON(){ downloadBlob("clients.geojson", new Blob([JSON.stringify(toGeoJSON(state.data),null,2)],{type:"application/geo+json"})); }
+
+/* ============ File System Access ============ */
+async function writeToHandle(){
+  const w = await state.fileHandle.createWritable();
+  await w.write(toCSV(state.data, state.headers));
+  await w.close();
+  setStatus("Enregistré "+new Date().toLocaleTimeString());
+  state.dirty = false;
+}
+async function saveWithFSAccess(){
+  if (!("showSaveFilePicker" in window)) { alert("Navigateur non compatible (File System Access)"); return; }
+  if (!state.fileHandle){
+    state.fileHandle = await window.showSaveFilePicker({
+      suggestedName:"clients.csv",
+      types:[{ description:"CSV", accept:{ "text/csv": [".csv"] } }]
+    });
+  }
+  try{ await writeToHandle(); }catch(e){ console.error(e); setStatus("Erreur d'enregistrement"); }
+}
+function scheduleAutosave(){
+  if (!state.fileHandle) return;
+  if (state.autosaveTimer) return;
+  state.autosaveTimer = setTimeout(async ()=>{
+    state.autosaveTimer = null;
+    if (state.dirty && state.autosave){
+      try{ await writeToHandle(); }catch(e){ console.error(e); setStatus("Autosave: erreur"); }
+    }
+  }, 1500);
+}
+async function toggleAutosave(){
+  if (!state.autosave){
+    if (!("showSaveFilePicker" in window)) { alert("Navigateur non compatible (File System Access)"); return; }
+    if (!state.fileHandle){
+      state.fileHandle = await window.showSaveFilePicker({
+        suggestedName:"clients.csv",
+        types:[{ description:"CSV", accept:{ "text/csv": [".csv"] } }]
+      });
+    }
+    state.autosave = true;
+    el("btnAutosave").textContent = "Désactiver l’autosave";
+    setStatus("Autosave actif");
+    if (state.dirty) scheduleAutosave();
+  } else {
+    state.autosave = false;
+    el("btnAutosave").textContent = "Activer l’autosave";
+    setStatus("Autosave arrêté");
+  }
+}
+
+/* ============ Recherche (Nominatim) ============ */
+async function doSearch(){
+  const q = el("fSearch").value.trim(); if (!q) return;
+  el("searchResults").textContent = "Recherche…";
+  const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q="+encodeURIComponent(q);
+  try{
+    const res = await fetch(url, { headers:{ "Accept":"application/json" } });
+    const data = await res.json();
+    renderSearchResults(data);
+  }catch(err){
+    console.error(err);
+    el("searchResults").textContent = "Erreur de recherche";
+  }
+}
+function renderSearchResults(items){
+  const box = el("searchResults"); box.innerHTML = "";
+  if (!items || !items.length){ box.textContent = "Aucun résultat"; return; }
+  const wrap = document.createElement("div");
+  items.forEach(it=>{
+    const line=document.createElement("div"); line.style.padding=".25rem 0";
+    const name=document.createElement("div"); name.textContent=it.display_name; name.style.marginBottom=".2rem";
+    const btns=document.createElement("div");
+    const bGo=document.createElement("button"); bGo.textContent="Aller";
+    bGo.addEventListener("click", ()=> state.map.setView([+it.lat,+it.lon], 18));
+    const bUse=document.createElement("button"); bUse.textContent="Coord."; bUse.style.marginLeft=".4rem";
+    bUse.addEventListener("click", ()=>{
+      el("fLat").value=(+it.lat).toFixed(6);
+      el("fLng").value=(+it.lon).toFixed(6);
+      el("fName").focus();
+    });
+    btns.appendChild(bGo); btns.appendChild(bUse);
+    line.appendChild(name); line.appendChild(btns);
+    wrap.appendChild(line);
+  });
+  box.appendChild(wrap);
+}
+
+/* ============ Import (CSV/TXT/GeoJSON) ============ */
+async function doLoadSelectedFile(){
+  const f = el("fileInput").files && el("fileInput").files[0];
+  if (!f) return alert("Choisissez un fichier CSV/TXT/GeoJSON.");
+  const ext = (f.name.split(".").pop()||"").toLowerCase();
+  const text = await f.text();
+  let rows = [];
+  if (ext==="csv" || ext==="txt") rows = parseCSV(text);
+  else rows = parseGeoJSON(text);
+  if (!rows.length) { alert("Aucune donnée client reconnue."); return; }
+  state.data = rows;
+  setDirty();
+  refresh();
+}
+
+/* ============ Events & Boot ============ */
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const act = b.dataset.act;
+  if (act === "del") { state.data.splice(+b.dataset.idx, 1); setDirty(); refresh(); }
+  if (act === "edit"){ selectRow(+b.dataset.idx); }
+  if (act === "fly") { const d = state.data[+b.dataset.idx]; if (d) state.map.setView([+d.lat,+d.lng], 18); }
+});
+el("clientForm").addEventListener("submit", e => { e.preventDefault(); addOrUpdateFromForm(); });
+el("btnClear").addEventListener("click", clearForm);
+el("btnLoad").addEventListener("click", doLoadSelectedFile);
+el("btnExportCSV").addEventListener("click", exportCSV);
+el("btnExportGeoJSON").addEventListener("click", exportGeoJSON);
+el("btnSave").addEventListener("click", saveWithFSAccess);
+el("btnAutosave").addEventListener("click", () => { toggleAutosave(); });
+el("btnSearch").addEventListener("click", () => { el("searchResults").innerHTML=""; doSearch(); });
+el("fSearch").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); el("searchResults").innerHTML=""; doSearch(); } });
+el("btnClearSearch").addEventListener("click", () => { el("searchResults").innerHTML=""; el("fSearch").value=""; });
+el("filterSystem").addEventListener("change", e => { state.filterSystem = e.target.value; refresh(); });
+el("filterName").addEventListener("input",  e => { state.filterName  = e.target.value; refresh(); });
+
+// toggle panneau (mobile)
+el("btnTogglePanel").addEventListener("click", togglePanel);
+
+initMap();
+refresh();
+showFormMode();
+updateHeaderHeightVar();
+
+// Recalcule au chargement des polices (si dispo)
+if ('fonts' in document) { try { document.fonts.ready.then(updateHeaderHeightVar); } catch(_){} }
+</script>
+</body>
+</html>
