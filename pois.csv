@@ -1,6 +1,13 @@
-name,lat,lng,address,phone,notes,system
-efezqef,48.911576,2.449878,ef<sf,<ef<s,,
-cescse<,49.078150,0.840497,ef<sf,<secsec,es<cccs<ecsec,
-cescse<c<c<sc<sc<esc<,49.229154,2.186311,ef<sf,<secsec,es<cccs<ecsec,Systeme A
-rgrgd,49.339903,1.153605,ef<sfgrd,<secsec,c<secsec,Systeme A
-yjgyjyg,48.578741,1.422768,gyjgyj,yjgy,jygyfj,Systeme A
+name,lat,lng,address,phone,notes,system,nom_fe,telephone_fe,contact_nom,contact_telephone,contact_email,last_visit
+Clinique du Val Fleuri,49.443232,1.099971,"12 rue des Charmilles, 76000 Rouen",+33 1 99 00 12 34,Accès livraison par l'arrière du bâtiment,Systeme A,Marc Lefebvre,+33 6 39 98 10 01,Sophie Renard,+33 1 99 00 12 35,s.renard@example.com,2026-03-12
+Centre d'Imagerie Bellevue,49.494370,0.107929,"3 avenue de la Falaise, 76600 Le Havre",+33 2 99 00 22 10,"Badge visiteur obligatoire, accueil niveau 0",Systeme B,Nadia Belkacem,+33 6 39 98 10 02,Julien Marchand,+33 2 99 00 22 11,j.marchand@example.com,2025-06-18
+Polyclinique des Trois Ormes,49.182863,-0.370679,"45 boulevard Sainte-Anne, 14000 Caen",+33 2 99 00 33 20,Jamais visité depuis la reprise du contrat,Systeme A,Marc Lefebvre,+33 6 39 98 10 01,Claire Dubosc,+33 2 99 00 33 21,c.dubosc@example.com,
+Hôpital Privé Saint-Ancelin,49.894067,2.295753,"88 rue du Pont Neuf, 80000 Amiens",+33 3 99 00 44 30,Maintenance préventive à replanifier au T4,Systeme C,Thomas Girard,+33 6 39 98 10 03,Éric Vasseur,+33 3 99 00 44 31,e.vasseur@example.com,2026-01-27
+Cabinet de Radiologie Montsoreau,49.024444,1.150000,"7 place du Marché, 27000 Évreux",+33 2 99 00 55 40,"Petite structure, un seul praticien",Systeme B,Nadia Belkacem,+33 6 39 98 10 02,Hélène Prieur,+33 2 99 00 55 41,h.prieur@example.com,2024-11-05
+Centre Médical Les Peupliers,49.429513,2.080847,"21 chemin des Peupliers, 60000 Beauvais",+33 3 99 00 66 50,Parking technique côté rue Basse,Systeme A,Thomas Girard,+33 6 39 98 10 03,Antoine Rey,+33 3 99 00 66 51,a.rey@example.com,2026-05-04
+Clinique de la Porte Dorée,49.417558,2.826057,"2 rue de la Porte Dorée, 60200 Compiègne",+33 3 99 00 77 60,"Contact principal en congé jusqu'en mars, voir le suppléant",Systeme C,Marc Lefebvre,+33 6 39 98 10 01,Farida Ould,+33 3 99 00 77 61,f.ould@example.com,2025-09-30
+Institut Diagnostic Rive-Neuve,49.035600,2.063800,"14 allée des Ateliers, 95000 Cergy",+33 1 99 00 88 70,Site pilote pour la nouvelle configuration,Systeme B,Nadia Belkacem,+33 6 39 98 10 02,Paul Estève,+33 1 99 00 88 71,p.esteve@example.com,2026-06-11
+Centre de Santé Grand Chêne,48.737000,1.365500,"30 rue du Grand Chêne, 28100 Dreux",+33 2 99 00 99 80,Nouveau client — première visite à programmer,Systeme A,Thomas Girard,+33 6 39 98 10 03,Léa Vasquez,+33 2 99 00 99 81,l.vasquez@example.com,
+Clinique Vallon-Vert,48.456000,1.484000,"5 rue du Vallon, 28000 Chartres",+33 2 99 00 11 90,"Livraison uniquement le matin, quai n°2",Systeme C,Marc Lefebvre,+33 6 39 98 10 01,Bruno Cazals,+33 2 99 00 11 91,b.cazals@example.com,2025-12-08
+Maison Médicale du Vieux Pont,48.990500,1.716600,"18 quai du Vieux Pont, 78200 Mantes-la-Jolie",+33 1 99 00 21 00,Local technique au sous-sol — prévoir la clé,Systeme B,Nadia Belkacem,+33 6 39 98 10 02,Yann Corbin,+33 1 99 00 21 01,y.corbin@example.com,2025-02-14
+Centre Hospitalier Privé de l'Aulne,48.540300,2.660000,"60 avenue de l'Aulne, 77000 Melun",+33 1 99 00 31 10,Astreinte weekend possible sur accord préalable,Systeme A,Thomas Girard,+33 6 39 98 10 03,Amina Sarr,+33 1 99 00 31 11,a.sarr@example.com,2026-07-02

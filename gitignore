@@ -1,0 +1,48 @@
+# =====================================================================
+#  DONNÉES CLIENTS — NE JAMAIS PUBLIER
+#  Le dossier local est synchronisé avec GitHub : sans ces règles, un
+#  fichier de travail contenant des coordonnées de clients réels serait
+#  poussé sur le dépôt. Seul l'exemple factice pois.csv est suivi.
+#
+#  Pour suivre volontairement un autre fichier :
+#      git add -f mon-fichier.csv
+# =====================================================================
+*.csv
+*.geojson
+*.json
+!pois.csv
+
+# Exports produits par la page (« Exporter CSV » / « Exporter GeoJSON »)
+clients.csv
+clients.geojson
+
+# Copies de sauvegarde du CSV
+*.csv.bak
+sauvegarde/
+sauvegardes/
+backup/
+
+# Fonds de carte hors ligne — volumineux, à garder en local
+france-tiles/
+tuiles/
+*.mbtiles
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS / Linux
+.DS_Store
+._*
+.Trash-*
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+*~
+*.bak
